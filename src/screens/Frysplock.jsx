@@ -1,3 +1,4 @@
+import FotaLista from './FotaLista';
 import { useState, useEffect } from 'react';
 import Produkter from './Produkter';
 import Plocklista from './Plocklista';
@@ -21,17 +22,30 @@ export default function Frysplock() {
     return <Produkter onTillbaka={() => setVy('start')} />;
   }
 
-  if (vy === 'ny') {
-    return (
-      <NyPlocklista
-        onKlar={(id) => {
-          setAktivListaId(id);
-          setVy('plocklista');
-        }}
-        onAvbryt={() => setVy('start')}
-      />
-    );
-  }
+  if (vy === 'fota') {
+  return (
+    <FotaLista
+      onKlar={(text, bilder) => {
+        console.log('OCR-text:', text);
+        // Här bygger vi granskningsskärmen sen
+        setVy('start');
+      }}
+      onAvbryt={() => setVy('start')}
+    />
+  );
+}
+
+if (vy === 'ny') {
+  return (
+    <NyPlocklista
+      onKlar={(id) => {
+        setAktivListaId(id);
+        setVy('plocklista');
+      }}
+      onAvbryt={() => setVy('start')}
+    />
+  );
+}
 
   if (vy === 'plocklista') {
     return (
@@ -49,6 +63,10 @@ export default function Frysplock() {
       <button onClick={() => setVy('ny')} className="knapp-primär">
         Ny plocklista
       </button>
+	
+<button onClick={() => setVy('fota')} className="knapp-primär">
+  Fota plocklista
+</button>
 
       {listor.length > 0 && (
         <>
