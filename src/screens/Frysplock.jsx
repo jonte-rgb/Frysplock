@@ -1,14 +1,17 @@
-import FotaLista from './FotaLista';
 import { useState, useEffect } from 'react';
 import Produkter from './Produkter';
 import Plocklista from './Plocklista';
 import NyPlocklista from './NyPlocklista';
+import FotaLista from './FotaLista';
+import GranskaLista from './GranskaLista';
 import { getAllPickLists } from '../storage/pickLists';
 
 export default function Frysplock() {
   const [vy, setVy] = useState('start');
   const [aktivListaId, setAktivListaId] = useState(null);
   const [listor, setListor] = useState([]);
+  const [ocrText, setOcrText] = useState('');
+  const [ocrBilder, setOcrBilder] = useState([]);
 
   async function laddaListor() {
     setListor(await getAllPickLists());
@@ -23,29 +26,43 @@ export default function Frysplock() {
   }
 
   if (vy === 'fota') {
-  return (
-    <FotaLista
-      onKlar={(text, bilder) => {
-        console.log('OCR-text:', text);
-        // Här bygger vi granskningsskärmen sen
-        setVy('start');
-      }}
-      onAvbryt={() => setVy('start')}
-    />
-  );
-}
+    return (
+      <FotaLista
+        onKlar={(text, bilder) => {
+          setOcrText(text);
+          setOcrBilder(bilder);
+          setVy('granska');
+        }}
+        onAvbryt={() => setVy('start')}
+      />
+    );
+  }
 
-if (vy === 'ny') {
-  return (
-    <NyPlocklista
-      onKlar={(id) => {
-        setAktivListaId(id);
-        setVy('plocklista');
-      }}
-      onAvbryt={() => setVy('start')}
-    />
-  );
-}
+  if (vy === 'granska') {
+    return (
+      <GranskaLista
+        ocrText={ocrText}
+        bilder={ocrBilder}
+        onKlar={(id) => {
+          setAktivListaId(id);
+          setVy('plocklista');
+        }}
+        onAvbryt={() => setVy('start')}
+      />
+    );
+  }
+
+  if (vy === 'ny') {
+    return (
+      <NyPlocklista
+        onKlar={(id) => {
+          setAktivListaId(id);
+          setVy('plocklista');
+        }}
+        onAvbryt={() => setVy('start')}
+      />
+    );
+  }
 
   if (vy === 'plocklista') {
     return (
@@ -60,13 +77,13 @@ if (vy === 'ny') {
     <div>
       <h1>Frysplock</h1>
 
-      <button onClick={() => setVy('ny')} className="knapp-primär">
-        Ny plocklista
+      <button onClick={() => setVy('fota')} className="knapp-primär">
+        Fota plocklista
       </button>
-	
-<button onClick={() => setVy('fota')} className="knapp-primär">
-  Fota plocklista
-</button>
+
+      <button onClick={() => setVy('ny')} className="knapp-sekundär">
+        Ny plocklista manuellt
+      </button>
 
       {listor.length > 0 && (
         <>

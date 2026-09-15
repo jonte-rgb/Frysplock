@@ -252,3 +252,64 @@ h2 {
   color: #f87171;
   margin-bottom: 1rem;
 }
+.granska-lista {
+  list-style: none;
+  margin-bottom: 1rem;
+}
+
+.granska-lista li {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #333;
+}
+
+.granska-rad {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.granska-rad input[type="text"] {
+  flex: 1;
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  border: 1px solid #444;
+  background: #222;
+  color: #f0f0f0;
+  font-size: 0.95rem;
+}
+
+.granska-rad input[type="number"] {
+  width: 70px;
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  border: 1px solid #444;
+  background: #222;
+  color: #f0f0f0;
+  font-size: 0.95rem;
+  text-align: right;
+}
+
+.granska-lista li.matchad .granska-rad input {
+  border-color: #4ade80;
+}
+
+.granska-lista li.omatchad .granska-rad input {
+  border-color: #f87171;
+}
+
+.ta-bort {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: #333;
+  color: #f0f0f0;
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+.varning {
+  color: #f87171;
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+}
