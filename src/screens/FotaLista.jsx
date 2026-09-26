@@ -1,20 +1,60 @@
 import { useState } from 'react';
 
+function komprimeraBild(file) {
+  return new Promise((resolve, reject) => {
+    const läsare = new FileReader();
+    läsare.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const maxBredd = 1500;
+        let bredd = img.width;
+        let höjd = img.height;
+
+        if (bredd > maxBredd) {
+          höjd = Math.round((höjd * maxBredd) / bredd);
+          bredd = maxBredd;
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = bredd;
+        canvas.height = höjd;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, bredd, höjd);
+
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        const base64 = dataUrl.split(',')[1];
+        resolve(base64);
+      };
+      img.onerror = reject;
+      img.src = läsare.result;
+    };
+    läsare.onerror = reject;
+    läsare.readAsDataURL(file);
+  });
+}
+
 export default function FotaLista({ onKlar, onAvbryt }) {
   const [bilder, setBilder] = useState([]);
   const [bearbetar, setBearbetar] = useState(false);
+  const [status, setStatus] = useState('');
   const [fel, setFel] = useState(null);
 
-  function hanteraFil(e) {
+  async function hanteraFil(e) {
     const filer = Array.from(e.target.files);
-    filer.forEach((fil) => {
-      const läsare = new FileReader();
-      läsare.onload = () => {
-        const base64 = läsare.result.split(',')[1];
-        setBilder((prev) => [...prev, base64]);
-      };
-      läsare.readAsDataURL(fil);
-    });
+    setStatus('Komprimerar...');
+
+    try {
+      const komprimerade = [];
+      for (const fil of filer) {
+        const base64 = await komprimeraBild(fil);
+        komprimerade.push(base64);
+      }
+      setBilder((prev) => [...prev, ...komprimerade]);
+      setStatus('');
+    } catch (err) {
+      setFel('Kunde inte läsa bilden: ' + err.message);
+      setStatus('');
+    }
   }
 
   async function bearbeta() {
@@ -24,22 +64,33 @@ export default function FotaLista({ onKlar, onAvbryt }) {
 
     try {
       const resultat = [];
-      for (const bild of bilder) {
+      for (let i = 0; i < bilder.length; i++) {
+        setStatus(`Läser bild ${i + 1} av ${bilder.length}...`);
         const svar = await fetch('/api/ocr', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ image: bild }),
+          body: JSON.stringify({ image: bilder[i] }),
         });
-        const data = await svar.json();
+
+        const text = await svar.text();
+        let data;
+        try {
+          data = JSON.parse(text);
+        } catch {
+          throw new Error('Servern svarade inte med JSON: ' + text.substring(0, 200));
+        }
+
         if (data.error) throw new Error(data.error);
         resultat.push(data.text);
       }
+
       const allText = resultat.join('\n\n---\n\n');
       onKlar(allText, bilder);
     } catch (err) {
       setFel(err.message);
     } finally {
       setBearbetar(false);
+      setStatus('');
     }
   }
 
@@ -75,6 +126,7 @@ export default function FotaLista({ onKlar, onAvbryt }) {
         </div>
       )}
 
+      {status && <p className="undertitel">{status}</p>}
       {fel && <p className="fel">{fel}</p>}
 
       <button
