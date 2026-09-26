@@ -3,6 +3,7 @@ import Frysplock from './screens/Frysplock';
 import Deg from './screens/Deg';
 import InIFrys from './screens/InIFrys';
 import Baka from './screens/Baka';
+import SaldoVy from './screens/SaldoVy';
 
 function App() {
   const [aktivFlik, setAktivFlik] = useState('frysplock');
@@ -12,6 +13,7 @@ function App() {
     if (aktivFlik === 'infrys') return <InIFrys />;
     if (aktivFlik === 'frysplock') return <Frysplock />;
     if (aktivFlik === 'baka') return <Baka />;
+    if (aktivFlik === 'saldo') return <SaldoVy />;
   }
 
   return (
@@ -30,6 +32,9 @@ function App() {
         </button>
         <button onClick={() => setAktivFlik('baka')} className={aktivFlik === 'baka' ? 'aktiv' : ''}>
           Baka
+        </button>
+        <button onClick={() => setAktivFlik('saldo')} className={aktivFlik === 'saldo' ? 'aktiv' : ''}>
+          Saldo
         </button>
       </nav>
     </div>
