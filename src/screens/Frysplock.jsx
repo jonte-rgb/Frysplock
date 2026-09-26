@@ -1,3 +1,4 @@
+import SaldoVy from './SaldoVy';
 import JusteraSaldo from './JusteraSaldo';
 import { useState, useEffect } from 'react';
 import Produkter from './Produkter';
@@ -28,6 +29,9 @@ export default function Frysplock() {
   if (vy === 'saldo') {
   return <JusteraSaldo onTillbaka={() => setVy('start')} />;
   }
+if (vy === 'saldovy') {
+  return <SaldoVy onTillbaka={() => setVy('start')} />;
+}
 
   if (vy === 'fota') {
     return (
@@ -88,7 +92,9 @@ export default function Frysplock() {
       <button onClick={() => setVy('ny')} className="knapp-sekundär">
         Ny plocklista manuellt
       </button>
-
+      <button onClick={() => setVy('saldovy')} className="knapp-sekundär">
+  Visa saldo
+</button>
       {listor.length > 0 && (
         <>
           <h2 className="sektionsrubrik">Aktiva listor</h2>

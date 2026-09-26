@@ -35,3 +35,14 @@ export async function getStock(produktId, styckPerPlåt) {
 
   return saldo;
 }
+export async function getAllEvents() {
+  return await db.stockEvents.toArray();
+}
+
+export async function getEventsForProductSorted(produktId) {
+  const events = await db.stockEvents
+    .where('produktId')
+    .equals(produktId)
+    .toArray();
+  return events.sort((a, b) => new Date(b.tidpunkt) - new Date(a.tidpunkt));
+}

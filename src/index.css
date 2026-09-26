@@ -324,3 +324,33 @@ h2 {
   text-align: center;
   margin: 1rem 0;
 }
+.saldo-huvud {
+  text-align: center;
+  margin: 2rem 0;
+}
+
+.historik-lista {
+  list-style: none;
+}
+
+.historik-lista li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border-bottom: 1px solid #333;
+}
+
+.historik-lista .undertitel {
+  font-size: 0.8rem;
+}
+
+.positiv {
+  color: #4ade80;
+  font-weight: 600;
+}
+
+.negativ {
+  color: #f87171;
+  font-weight: 600;
+}
