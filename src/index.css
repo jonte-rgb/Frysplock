@@ -354,3 +354,19 @@ h2 {
   color: #f87171;
   font-weight: 600;
 }
+.justering-panel {
+  background: #222;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.knapp-rad {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.knapp-rad button {
+  flex: 1;
+}

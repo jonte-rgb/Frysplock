@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getAllProducts } from '../storage/products';
-import { getStock, getEventsForProductSorted } from '../storage/stockEvents';
+import { getStock, getEventsForProductSorted, addStockEvent } from '../storage/stockEvents';
 
 export default function SaldoVy({ onTillbaka }) {
   const [produkter, setProdukter] = useState([]);
@@ -8,6 +8,8 @@ export default function SaldoVy({ onTillbaka }) {
   const [sök, setSök] = useState('');
   const [valdProdukt, setValdProdukt] = useState(null);
   const [historik, setHistorik] = useState([]);
+  const [visarJustering, setVisarJustering] = useState(false);
+  const [nyttSaldo, setNyttSaldo] = useState('');
 
   async function ladda() {
     const alla = await getAllProducts();
@@ -26,7 +28,36 @@ export default function SaldoVy({ onTillbaka }) {
 
   async function visaHistorik(produkt) {
     setValdProdukt(produkt);
+    setVisarJustering(false);
+    setNyttSaldo('');
     const events = await getEventsForProductSorted(produkt.id);
+    setHistorik(events);
+  }
+
+  async function sparaJustering() {
+    if (!valdProdukt || nyttSaldo === '') return;
+
+    const aktuellt = saldon[valdProdukt.id] ?? 0;
+    const nytt = Number(nyttSaldo);
+    const skillnad = nytt - aktuellt;
+
+    if (skillnad === 0) {
+      setVisarJustering(false);
+      return;
+    }
+
+    await addStockEvent({
+      produktId: valdProdukt.id,
+      typ: 'korrigering',
+      antal: skillnad,
+      enhet: 'plåt',
+      källa: 'manuell justering',
+    });
+
+    setVisarJustering(false);
+    setNyttSaldo('');
+    await ladda();
+    const events = await getEventsForProductSorted(valdProdukt.id);
     setHistorik(events);
   }
 
@@ -39,6 +70,8 @@ export default function SaldoVy({ onTillbaka }) {
   }
 
   if (valdProdukt) {
+    const aktuelltSaldo = saldon[valdProdukt.id] ?? 0;
+
     return (
       <div>
         <div className="topprad">
@@ -50,10 +83,45 @@ export default function SaldoVy({ onTillbaka }) {
 
         <div className="saldo-huvud">
           <p className="stor-siffra">
-            {Math.round((saldon[valdProdukt.id] ?? 0) * 10) / 10}
+            {Math.round(aktuelltSaldo * 10) / 10}
           </p>
           <p className="undertitel">plåtar i lager</p>
         </div>
+
+        {visarJustering ? (
+          <div className="justering-panel">
+            <label className="undertitel">Ange nytt saldo (plåtar):</label>
+            <input
+              type="number"
+              inputMode="numeric"
+              value={nyttSaldo}
+              onChange={(e) => setNyttSaldo(e.target.value)}
+              className="saldo-input"
+              autoFocus
+            />
+            <div className="knapp-rad">
+              <button
+                onClick={() => setVisarJustering(false)}
+                className="knapp-sekundär"
+              >
+                Avbryt
+              </button>
+              <button onClick={sparaJustering} className="knapp-primär">
+                Spara
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            onClick={() => {
+              setNyttSaldo(String(Math.round(aktuelltSaldo * 10) / 10));
+              setVisarJustering(true);
+            }}
+            className="knapp-primär stor"
+          >
+            Justera saldo
+          </button>
+        )}
 
         <h2 className="sektionsrubrik">Historik</h2>
 
@@ -92,10 +160,7 @@ export default function SaldoVy({ onTillbaka }) {
 
   return (
     <div>
-      <div className="topprad">
-        <button onClick={onTillbaka} className="knapp-sekundär">← Tillbaka</button>
-        <h1>Saldo</h1>
-      </div>
+      <h1>Saldo</h1>
 
       <input
         type="text"
