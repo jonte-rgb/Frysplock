@@ -313,3 +313,14 @@ h2 {
   font-size: 0.8rem;
   margin-top: 0.25rem;
 }
+.saldo-input {
+  width: 100%;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid #444;
+  background: #222;
+  color: #f0f0f0;
+  font-size: 2rem;
+  text-align: center;
+  margin: 1rem 0;
+}

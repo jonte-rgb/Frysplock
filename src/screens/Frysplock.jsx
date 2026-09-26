@@ -1,3 +1,4 @@
+import JusteraSaldo from './JusteraSaldo';
 import { useState, useEffect } from 'react';
 import Produkter from './Produkter';
 import Plocklista from './Plocklista';
@@ -23,6 +24,9 @@ export default function Frysplock() {
 
   if (vy === 'produkter') {
     return <Produkter onTillbaka={() => setVy('start')} />;
+  }
+  if (vy === 'saldo') {
+  return <JusteraSaldo onTillbaka={() => setVy('start')} />;
   }
 
   if (vy === 'fota') {
@@ -109,6 +113,9 @@ export default function Frysplock() {
       <button onClick={() => setVy('produkter')} className="knapp-sekundär">
         Hantera produkter
       </button>
+      <button onClick={() => setVy('saldo')} className="knapp-sekundär">
+  Justera saldo
+</button>
     </div>
   );
 }
