@@ -20,6 +20,7 @@ body {
 
 .innehall {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: 1rem;
 }
@@ -270,6 +271,7 @@ h2 {
 
 .granska-rad input[type="text"] {
   flex: 1;
+  min-width: 0;
   padding: 0.5rem;
   border-radius: 0.5rem;
   border: 1px solid #444;
@@ -370,3 +372,42 @@ h2 {
 .knapp-rad button {
   flex: 1;
 }
+
+.knapp-sekundär:disabled { opacity: 0.6; cursor: not-allowed; }
+.topprad h1 { min-width: 0; overflow-wrap: anywhere; }
+.topprad > button { flex-shrink: 0; }
+.produktlista li.plockrad { padding: 0; }
+.plockrad-knapp {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  width: 100%; padding: 1rem; border: 0; text-align: left;
+  background: transparent; color: inherit; font: inherit; cursor: pointer;
+}
+.plockrad-knapp:disabled { cursor: default; }
+.plockrad-knapp .antal { flex-shrink: 0; }
+.produktlista small.fel { display: block; margin: 0.25rem 0; }
+.historik-lista li { gap: 0.75rem; }
+.historik-lista li > span { flex-shrink: 0; }
+.ocr-original { color: #aaa; font-size: 0.85rem; margin-bottom: 0.5rem; overflow-wrap: anywhere; }
+.ocr-produktval {
+  width: 100%; min-height: 44px; margin: 0.5rem 0; padding: 0.5rem;
+  border: 1px solid #444; border-radius: 0.5rem; background: #222; color: #f0f0f0; font: inherit;
+}
+.ocr-alias { display: flex; align-items: center; gap: 0.5rem; margin: 0.75rem 0; font-size: 0.9rem; }
+.ocr-alias input { width: 20px; height: 20px; flex-shrink: 0; }
+.ocr-radknappar { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 0.5rem 0; }
+.ocr-produktform { padding: 0.75rem; margin: 0.75rem 0; background: #222; border-radius: 0.5rem; }
+.ocr-produktform .knapp-rad { flex-wrap: wrap; }
+.ocr-sparinfo, .ocr-spara { margin-top: 1rem; }
+.ignorerade-rader li { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; }
+.ignorerade-rader li > span { min-width: 0; overflow-wrap: anywhere; color: #aaa; }
+.bildkort { display: flex; flex-direction: column; align-items: center; gap: 0.4rem; }
+.bildkort button { min-height: 44px; }
+.crop-instruktion { color: #aaa; margin-bottom: 1rem; }
+.crop-yta { position: relative; width: fit-content; max-width: 100%; margin: 0 auto 1rem; overflow: hidden; touch-action: none; }
+.crop-yta img { display: block; width: auto; height: auto; max-width: 100%; max-height: 52dvh; user-select: none; }
+.crop-markering { position: absolute; border: 2px solid #4ade80; box-shadow: 0 0 0 9999px #0008; pointer-events: none; }
+.crop-kanter { margin: 0.75rem 0; }
+.crop-kanter summary { padding: 0.5rem 0; cursor: pointer; }
+.crop-kanter label { display: block; margin: 0.75rem 0; }
+.crop-kanter input { display: block; width: 100%; margin-top: 0.5rem; }
+.crop-helbild { width: 100%; }

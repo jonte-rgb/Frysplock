@@ -1,8 +1,19 @@
 import { useState, useEffect } from 'react';
-import { getPickList, getRowsForPickList, updatePickListStatus } from '../storage/pickLists';
+import { getPickList, getRowsForPickList } from '../storage/pickLists';
 import { getProduct } from '../storage/products';
+import { formatDecimal } from '../utils/numbers';
 import PlockaProdukt from './PlockaProdukt';
 import EfterLista from './EfterLista';
+
+async function readPickList(listaId) {
+  const lista = await getPickList(listaId);
+  if (!lista) throw new Error('Plocklistan finns inte längre.');
+  const rows = await getRowsForPickList(listaId);
+  const rader = await Promise.all(rows.map(async (rad) => ({
+    ...rad, produkt: await getProduct(rad.produktId),
+  })));
+  return { lista, rader };
+}
 
 export default function Plocklista({ listaId, onTillbaka }) {
   const [lista, setLista] = useState(null);
@@ -10,31 +21,24 @@ export default function Plocklista({ listaId, onTillbaka }) {
   const [aktivRad, setAktivRad] = useState(null);
   const [visarEfterLista, setVisarEfterLista] = useState(false);
   const [sök, setSök] = useState('');
+  const [fel, setFel] = useState(null);
 
   async function ladda() {
-    const l = await getPickList(listaId);
-    const r = await getRowsForPickList(listaId);
-    const medProdukt = await Promise.all(
-      r.map(async (rad) => ({
-        ...rad,
-        produkt: await getProduct(rad.produktId),
-      }))
-    );
-    setLista(l);
-    setRader(medProdukt);
+    setFel(null);
+    const result = await readPickList(listaId);
+    setLista(result.lista);
+    setRader(result.rader);
   }
 
   useEffect(() => {
-    ladda();
+    let aktiv = true;
+    readPickList(listaId).then((result) => {
+      if (aktiv) { setLista(result.lista); setRader(result.rader); }
+    }).catch((error) => { if (aktiv) setFel(error.message); });
+    return () => { aktiv = false; };
   }, [listaId]);
 
-  useEffect(() => {
-    if (rader.length > 0 && rader.every((r) => r.plockad) && lista?.status !== 'klar') {
-      updatePickListStatus(listaId, 'klar');
-    }
-  }, [rader, lista]);
-
-  if (!lista) return <div>Laddar...</div>;
+  if (!lista) return <div><button onClick={onTillbaka} className="knapp-sekundär">← Tillbaka</button><p role="alert" className="fel">{fel || 'Laddar...'}</p></div>;
 
   if (visarEfterLista) {
     return (
@@ -52,7 +56,7 @@ export default function Plocklista({ listaId, onTillbaka }) {
         rad={aktivRad}
         onKlar={async () => {
           setAktivRad(null);
-          await ladda();
+          await ladda().catch((error) => setFel(error.message));
         }}
         onAvbryt={() => setAktivRad(null)}
       />
@@ -60,7 +64,7 @@ export default function Plocklista({ listaId, onTillbaka }) {
   }
 
   const filtrerade = rader.filter((r) =>
-    r.produkt?.namn?.toLowerCase().includes(sök.toLowerCase())
+    (r.produkt?.namn || 'Okänd').toLowerCase().includes(sök.toLowerCase())
   );
 
   const allaPlockade = rader.length > 0 && rader.every((r) => r.plockad);
@@ -71,6 +75,8 @@ export default function Plocklista({ listaId, onTillbaka }) {
         <button onClick={onTillbaka} className="knapp-sekundär">← Tillbaka</button>
         <h1>Plocklista {lista.datum}</h1>
       </div>
+
+      {fel && <p className="fel" role="alert">{fel}</p>}
 
       <button
         onClick={() => setVisarEfterLista(true)}
@@ -92,11 +98,12 @@ export default function Plocklista({ listaId, onTillbaka }) {
         {filtrerade.map((rad) => (
           <li
             key={rad.id}
-            onClick={() => setAktivRad(rad)}
-            className={rad.plockad ? 'plockad' : ''}
+            className={`plockrad ${rad.plockad ? 'plockad' : ''}`}
           >
-            <span>{rad.produkt?.namn || 'Okänd'}</span>
-            <span className="antal">{rad.antalStyck} st</span>
+            <button className="plockrad-knapp" disabled={rad.plockad} onClick={() => setAktivRad(rad)}>
+              <span>{rad.produkt?.namn || 'Okänd'}{rad.plockad ? ' ✓' : ''}</span>
+              <span className="antal">{formatDecimal(rad.antalStyck)} st</span>
+            </button>
           </li>
         ))}
       </ul>

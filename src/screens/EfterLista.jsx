@@ -2,52 +2,43 @@ import { useState, useEffect } from 'react';
 import { getRowsForPickList } from '../storage/pickLists';
 import { getProduct } from '../storage/products';
 import { getStock } from '../storage/stockEvents';
+import { formatDecimal } from '../utils/numbers';
 
 export default function EfterLista({ listaId, listaDatum, onTillbaka }) {
   const [rader, setRader] = useState([]);
   const [laddar, setLaddar] = useState(true);
-
-  async function ladda() {
-    setLaddar(true);
-    const r = await getRowsForPickList(listaId);
-    const medSaldo = await Promise.all(
-      r.map(async (rad) => {
-        const produkt = await getProduct(rad.produktId);
-        const saldo = produkt
-          ? await getStock(produkt.id, produkt.styckPerPlåt)
-          : 0;
-        return { ...rad, produkt, saldo };
-      })
-    );
-    setRader(medSaldo);
-    setLaddar(false);
-  }
+  const [fel, setFel] = useState(null);
 
   useEffect(() => {
+    let aktiv = true;
+    async function ladda() {
+      try {
+        const rows = await getRowsForPickList(listaId);
+        const result = await Promise.all(rows.map(async (rad) => {
+          const produkt = await getProduct(rad.produktId);
+          try {
+            if (!produkt) throw new Error('Produkten finns inte längre.');
+            return { ...rad, produkt, saldo: await getStock(produkt.id, produkt.styckPerPlåt) };
+          } catch (error) { return { ...rad, produkt, saldo: null, fel: error.message }; }
+        }));
+        if (aktiv) setRader(result);
+      } catch (error) { if (aktiv) setFel(error.message); }
+      finally { if (aktiv) setLaddar(false); }
+    }
     ladda();
+    return () => { aktiv = false; };
   }, [listaId]);
 
-  if (laddar) return <div>Laddar...</div>;
-
-  return (
-    <div>
-      <div className="topprad">
-        <button onClick={onTillbaka} className="knapp-sekundär">← Tillbaka</button>
-        <h1>Efter-lista</h1>
-      </div>
-
-      <p className="undertitel">Saldo efter plock {listaDatum}</p>
-
-      <ul className="produktlista">
-        {rader.map((rad) => (
-          <li key={rad.id} className={rad.plockad ? 'plockad' : ''}>
-            <span>{rad.produkt?.namn || 'Okänd'}</span>
-            <span className="antal">
-              {Math.round(rad.saldo * 10) / 10} plåtar
-            </span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
+  return <div>
+    <div className="topprad"><button onClick={onTillbaka} className="knapp-sekundär">← Tillbaka</button><h1>Efter-lista</h1></div>
+    <p className="undertitel">Aktuellt saldo · lista {listaDatum}</p>
+    {laddar && <p>Laddar...</p>}
+    {fel && <p className="fel" role="alert">{fel}</p>}
+    <ul className="produktlista">
+      {rader.map((rad) => <li key={rad.id} className={rad.plockad ? 'plockad' : ''}>
+        <span>{rad.produkt?.namn || 'Okänd'}{rad.fel && <small className="fel">{rad.fel}</small>}</span>
+        <span className="antal">{formatDecimal(rad.saldo)} plåtar</span>
+      </li>)}
+    </ul>
+  </div>;
 }

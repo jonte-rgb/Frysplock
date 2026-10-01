@@ -12,14 +12,15 @@ export default function Frysplock() {
   const [listor, setListor] = useState([]);
   const [ocrText, setOcrText] = useState('');
   const [ocrBilder, setOcrBilder] = useState([]);
-
-  async function laddaListor() {
-    const alla = await getAllPickLists();
-    setListor(alla.filter((l) => l.status !== 'klar'));
-  }
+  const [fel, setFel] = useState(null);
 
   useEffect(() => {
-    if (vy === 'start') laddaListor();
+    if (vy !== 'start') return;
+    let aktiv = true;
+    getAllPickLists().then((alla) => {
+      if (aktiv) { setListor(alla.filter((l) => l.status !== 'klar')); setFel(null); }
+    }).catch((error) => { if (aktiv) setFel(error.message); });
+    return () => { aktiv = false; };
   }, [vy]);
 
   if (vy === 'produkter') {
@@ -42,6 +43,7 @@ export default function Frysplock() {
   if (vy === 'granska') {
     return (
       <GranskaLista
+        key={ocrText}
         ocrText={ocrText}
         bilder={ocrBilder}
         onKlar={(id) => {
@@ -77,6 +79,7 @@ export default function Frysplock() {
   return (
     <div>
       <h1>Frysplock</h1>
+      {fel && <p className="fel" role="alert">{fel}</p>}
 
       <button onClick={() => setVy('fota')} className="knapp-primär">
         Fota plocklista

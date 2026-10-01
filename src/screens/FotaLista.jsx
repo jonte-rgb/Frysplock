@@ -1,141 +1,106 @@
-import { useState } from 'react';
-
-function komprimeraBild(file) {
-  return new Promise((resolve, reject) => {
-    const läsare = new FileReader();
-    läsare.onload = () => {
-      const img = new Image();
-      img.onload = () => {
-        const maxBredd = 1500;
-        let bredd = img.width;
-        let höjd = img.height;
-
-        if (bredd > maxBredd) {
-          höjd = Math.round((höjd * maxBredd) / bredd);
-          bredd = maxBredd;
-        }
-
-        const canvas = document.createElement('canvas');
-        canvas.width = bredd;
-        canvas.height = höjd;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, bredd, höjd);
-
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-        const base64 = dataUrl.split(',')[1];
-        resolve(base64);
-      };
-      img.onerror = reject;
-      img.src = läsare.result;
-    };
-    läsare.onerror = reject;
-    läsare.readAsDataURL(file);
-  });
-}
+import { useRef, useState } from 'react';
+import BeskärBild from '../components/BeskärBild';
+import { cropImage, readImageFile } from '../utils/images';
 
 export default function FotaLista({ onKlar, onAvbryt }) {
   const [bilder, setBilder] = useState([]);
-  const [bearbetar, setBearbetar] = useState(false);
+  const [beskärId, setBeskärId] = useState(null);
+  const [upptagen, setUpptagen] = useState(false);
   const [status, setStatus] = useState('');
   const [fel, setFel] = useState(null);
+  const låst = useRef(false);
+  const nästaBildId = useRef(0);
 
-  async function hanteraFil(e) {
-    const filer = Array.from(e.target.files);
-    setStatus('Komprimerar...');
-
+  async function hanteraFil(event) {
+    const filer = Array.from(event.target.files || []);
+    event.target.value = '';
+    if (!filer.length || låst.current) return;
+    låst.current = true; setUpptagen(true); setFel(null); setStatus('Komprimerar...');
     try {
-      const komprimerade = [];
-      for (const fil of filer) {
-        const base64 = await komprimeraBild(fil);
-        komprimerade.push(base64);
+      const nya = [];
+      for (const file of filer) {
+        const original = await readImageFile(file);
+        nya.push({ id: `bild-${++nästaBildId.current}`, original, data: original, crop: null });
       }
-      setBilder((prev) => [...prev, ...komprimerade]);
-      setStatus('');
-    } catch (err) {
-      setFel('Kunde inte läsa bilden: ' + err.message);
-      setStatus('');
-    }
+      setBilder((prev) => [...prev, ...nya]);
+      setBeskärId(nya[0].id);
+    } catch (error) { setFel(error.message || 'Bilden kunde inte öppnas.'); }
+    finally { låst.current = false; setUpptagen(false); setStatus(''); }
+  }
+
+  async function sparaBeskärning(selection) {
+    if (låst.current) return;
+    const bild = bilder.find((b) => b.id === beskärId);
+    if (!bild) return;
+    låst.current = true; setUpptagen(true); setFel(null);
+    try {
+      const helbild = selection.x === 0 && selection.y === 0 && selection.width === 1 && selection.height === 1;
+      const data = helbild ? bild.original : await cropImage(bild.original, selection);
+      setBilder((prev) => prev.map((b) => b.id === bild.id ? { ...b, data, crop: selection } : b));
+      setBeskärId(null);
+    } catch (error) { setFel(error.message || 'Bilden kunde inte beskäras.'); }
+    finally { låst.current = false; setUpptagen(false); }
   }
 
   async function bearbeta() {
-    if (bilder.length === 0) return;
-    setBearbetar(true);
-    setFel(null);
-
+    if (!bilder.length || låst.current) return;
+    låst.current = true; setUpptagen(true); setFel(null);
     try {
       const resultat = [];
       for (let i = 0; i < bilder.length; i++) {
         setStatus(`Läser bild ${i + 1} av ${bilder.length}...`);
-        const svar = await fetch('/api/ocr', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ image: bilder[i] }),
-        });
-
-        const text = await svar.text();
-        let data;
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 35000);
         try {
-          data = JSON.parse(text);
-        } catch {
-          throw new Error('Servern svarade inte med JSON: ' + text.substring(0, 200));
-        }
-
-        if (data.error) throw new Error(data.error);
-        resultat.push(data.text);
+          const svar = await fetch('/api/ocr', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image: bilder[i].data }), signal: controller.signal,
+          });
+          let data;
+          try { data = await svar.json(); }
+          catch (error) {
+            if (error?.name === 'AbortError') throw error;
+            throw new Error('Textläsningstjänsten svarade inte korrekt. Försök igen senare.');
+          }
+          if (!svar.ok || data.error) throw new Error(data.error || 'Textläsningen misslyckades. Försök igen.');
+          if (typeof data.text !== 'string' || !data.text.trim()) {
+            throw new Error(`Ingen text hittades i bild ${i + 1}. Beskär bilden eller ta ett tydligare foto.`);
+          }
+          resultat.push(data.text);
+        } catch (error) {
+          if (error.name === 'AbortError') throw new Error('Textläsningen tog för lång tid. Försök igen.');
+          if (error instanceof TypeError) throw new Error('Kunde inte nå textläsningstjänsten. Kontrollera uppkopplingen.');
+          throw error;
+        } finally { clearTimeout(timeout); }
       }
-
-      const allText = resultat.join('\n\n---\n\n');
-      onKlar(allText, bilder);
-    } catch (err) {
-      setFel(err.message);
-    } finally {
-      setBearbetar(false);
-      setStatus('');
-    }
+      onKlar(resultat.join('\n\n---\n\n'), bilder.map((b) => b.data));
+    } catch (error) { setFel(error.message || 'Textläsningen misslyckades.'); }
+    finally { låst.current = false; setUpptagen(false); setStatus(''); }
   }
 
-  return (
-    <div>
-      <div className="topprad">
-        <button onClick={onAvbryt} className="knapp-sekundär">← Avbryt</button>
-        <h1>Fota plocklista</h1>
-      </div>
+  const beskärBild = bilder.find((b) => b.id === beskärId);
+  if (beskärBild) return <BeskärBild key={beskärBild.id} bild={beskärBild.original}
+    initialCrop={beskärBild.crop || undefined} upptagen={upptagen} fel={fel}
+    onKlar={sparaBeskärning} onAvbryt={() => { setBeskärId(null); setFel(null); }} />;
 
-      <label className="fota-knapp">
-        Ta bild eller välj fil
-        <input
-          type="file"
-          accept="image/*"
-          capture="environment"
-          multiple
-          onChange={hanteraFil}
-          style={{ display: 'none' }}
-        />
-      </label>
-
-      {bilder.length > 0 && (
-        <div className="bild-lista">
-          {bilder.map((b, i) => (
-            <img
-              key={i}
-              src={`data:image/jpeg;base64,${b}`}
-              alt={`Bild ${i + 1}`}
-              className="miniatyr"
-            />
-          ))}
-        </div>
-      )}
-
-      {status && <p className="undertitel">{status}</p>}
-      {fel && <p className="fel">{fel}</p>}
-
-      <button
-        onClick={bearbeta}
-        disabled={bilder.length === 0 || bearbetar}
-        className="knapp-primär stor"
-      >
-        {bearbetar ? 'Bearbetar...' : `Bearbeta ${bilder.length} bild(er)`}
-      </button>
-    </div>
-  );
+  return <div>
+    <div className="topprad"><button onClick={onAvbryt} disabled={upptagen} className="knapp-sekundär">← Avbryt</button><h1>Fota plocklista</h1></div>
+    <label className="fota-knapp">Ta bild eller välj fil
+      <input type="file" accept="image/*" multiple onChange={hanteraFil} disabled={upptagen} style={{ display: 'none' }} />
+    </label>
+    {bilder.length > 0 && <>
+      <p className="crop-instruktion">Beskär varje bild till kolumnen som ska läsas, eller använd hela bilden.</p>
+      <div className="bild-lista">{bilder.map((b, i) => <div key={b.id} className="bildkort">
+        <img src={`data:image/jpeg;base64,${b.data}`} alt={`Bild ${i + 1}`} className="miniatyr" />
+        <span>Bild {i + 1}</span>
+        <button onClick={() => { setFel(null); setBeskärId(b.id); }} disabled={upptagen} className="knapp-sekundär">Beskär</button>
+        <button onClick={() => setBilder((prev) => prev.filter((bild) => bild.id !== b.id))} disabled={upptagen} className="knapp-sekundär">Ta bort</button>
+      </div>)}</div>
+    </>}
+    {status && <p className="undertitel" role="status">{status}</p>}
+    {fel && <p className="fel" role="alert">{fel}</p>}
+    <button onClick={bearbeta} disabled={!bilder.length || upptagen} className="knapp-primär stor">
+      {upptagen ? 'Bearbetar...' : `Bearbeta ${bilder.length} bild(er)`}
+    </button>
+  </div>;
 }

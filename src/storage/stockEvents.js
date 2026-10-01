@@ -1,48 +1,49 @@
-import { db } from '../db';
+import { db } from '../db.js';
+import { calculateStock, canonicalStockEvent, STOCK_EPSILON } from '../services/stock.js';
+import { validateStockCount } from '../utils/numbers.js';
 
-export async function addStockEvent({ produktId, typ, antal, enhet, källa }) {
-  return await db.stockEvents.add({
-    produktId,
-    typ, // 'plock', 'inlägg', 'bak', 'korrigering'
-    antal,
-    enhet, // 'plåt' eller 'styck'
-    källa,
-    tidpunkt: new Date().toISOString(),
+export async function addStockEvent({ produktId, typ, antal, enhet = 'plåt', källa }) {
+  return db.transaction('rw', db.products, db.stockEvents, async () => {
+    const product = await db.products.get(produktId);
+    if (!product) throw new Error('Produkten finns inte längre.');
+    const event = canonicalStockEvent({ typ, antal, enhet }, product.styckPerPlåt);
+    return db.stockEvents.add({
+      ...event, produktId, källa, styckPerPlåtVidHändelse: product.styckPerPlåt,
+      tidpunkt: new Date().toISOString(),
+    });
   });
 }
 
 export async function getEventsForProduct(produktId) {
-  return await db.stockEvents
-    .where('produktId')
-    .equals(produktId)
-    .toArray();
+  return db.stockEvents.where('produktId').equals(produktId).toArray();
 }
 
 export async function getStock(produktId, styckPerPlåt) {
-  const events = await getEventsForProduct(produktId);
-  let saldo = 0;
-
-  for (const e of events) {
-    let antal = e.antal;
-    if (e.enhet === 'styck' && styckPerPlåt) {
-      antal = antal / styckPerPlåt; // omvandla till plåtar
-    }
-    if (e.typ === 'plock') saldo -= antal;
-    else if (e.typ === 'inlägg') saldo += antal;
-    else if (e.typ === 'bak') saldo -= antal;
-    else if (e.typ === 'korrigering') saldo += antal; // korrigering kan vara + eller -
-  }
-
-  return saldo;
+  return calculateStock(await getEventsForProduct(produktId), styckPerPlåt);
 }
+
+export async function setStock(produktId, value) {
+  const target = validateStockCount(value);
+  return db.transaction('rw', db.products, db.stockEvents, async () => {
+    const product = await db.products.get(produktId);
+    if (!product) throw new Error('Produkten finns inte längre.');
+    const difference = target - await getStock(produktId, product.styckPerPlåt);
+    if (!Number.isFinite(difference)) throw new Error('Korrigeringen skulle ge ett ogiltigt saldo.');
+    if (Math.abs(difference) > STOCK_EPSILON) {
+      await db.stockEvents.add({
+        produktId, typ: 'korrigering', antal: difference, enhet: 'plåt',
+        källa: 'manuell justering', tidpunkt: new Date().toISOString(),
+      });
+    }
+    return target;
+  });
+}
+
 export async function getAllEvents() {
-  return await db.stockEvents.toArray();
+  return db.stockEvents.toArray();
 }
 
 export async function getEventsForProductSorted(produktId) {
-  const events = await db.stockEvents
-    .where('produktId')
-    .equals(produktId)
-    .toArray();
+  const events = await getEventsForProduct(produktId);
   return events.sort((a, b) => new Date(b.tidpunkt) - new Date(a.tidpunkt));
 }
