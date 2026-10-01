@@ -1,6 +1,5 @@
-import { getPickList, getRowsForPickList, updatePickListStatus } from '../storage/pickLists';
 import { useState, useEffect } from 'react';
-import { getPickList, getRowsForPickList } from '../storage/pickLists';
+import { getPickList, getRowsForPickList, updatePickListStatus } from '../storage/pickLists';
 import { getProduct } from '../storage/products';
 import PlockaProdukt from './PlockaProdukt';
 import EfterLista from './EfterLista';
@@ -26,15 +25,16 @@ export default function Plocklista({ listaId, onTillbaka }) {
   }
 
   useEffect(() => {
-  ladda();
-}, [listaId]);
+    ladda();
+  }, [listaId]);
 
-// Ny effekt: sätt status till 'klar' när alla rader är plockade
-useEffect(() => {
-  if (rader.length > 0 && rader.every((r) => r.plockad) && lista?.status !== 'klar') {
-    updatePickListStatus(listaId, 'klar');
-  }
-}, [rader, lista]);  if (!lista) return <div>Laddar...</div>;
+  useEffect(() => {
+    if (rader.length > 0 && rader.every((r) => r.plockad) && lista?.status !== 'klar') {
+      updatePickListStatus(listaId, 'klar');
+    }
+  }, [rader, lista]);
+
+  if (!lista) return <div>Laddar...</div>;
 
   if (visarEfterLista) {
     return (

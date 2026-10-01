@@ -13,18 +13,19 @@ export default function Frysplock() {
   const [ocrText, setOcrText] = useState('');
   const [ocrBilder, setOcrBilder] = useState([]);
 
-  
+  async function laddaListor() {
+    const alla = await getAllPickLists();
+    setListor(alla.filter((l) => l.status !== 'klar'));
+  }
+
   useEffect(() => {
-    if (vyasync function laddaListor() {
-  const alla = await getAllPickLists();
-  setListor(alla.filter((l) => l.status !== 'klar'));
-} === 'start') laddaListor();
+    if (vy === 'start') laddaListor();
   }, [vy]);
 
   if (vy === 'produkter') {
     return <Produkter onTillbaka={() => setVy('start')} />;
   }
-  
+
   if (vy === 'fota') {
     return (
       <FotaLista
@@ -84,7 +85,8 @@ export default function Frysplock() {
       <button onClick={() => setVy('ny')} className="knapp-sekundär">
         Ny plocklista manuellt
       </button>
-            {listor.length > 0 && (
+
+      {listor.length > 0 && (
         <>
           <h2 className="sektionsrubrik">Aktiva listor</h2>
           <ul className="produktlista">
@@ -108,6 +110,6 @@ export default function Frysplock() {
       <button onClick={() => setVy('produkter')} className="knapp-sekundär">
         Hantera produkter
       </button>
-          </div>
+    </div>
   );
 }
