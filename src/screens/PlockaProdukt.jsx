@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { markRowPicked } from '../storage/pickLists';
-import { addStockEvent, getStock } from '../storage/stockEvents';
+import { completePick } from '../services/picking';
+import { getStock } from '../storage/stockEvents';
 
 export default function PlockaProdukt({ rad, onKlar, onAvbryt }) {
-  const [steg, setSteg] = useState('plocka'); // 'plocka' | 'saldo'
+  const [steg, setSteg] = useState('plocka');
   const [förväntatSaldo, setFörväntatSaldo] = useState(null);
   const [faktisktSaldo, setFaktisktSaldo] = useState('');
 
@@ -18,28 +18,12 @@ export default function PlockaProdukt({ rad, onKlar, onAvbryt }) {
   }
 
   async function bekräftaSaldo(avvikelse = null) {
-    // Logga plocket
-    await addStockEvent({
-      produktId: produkt.id,
-      typ: 'plock',
-      antal: plåtarAttPlocka,
-      enhet: 'plåt',
-      källa: 'plocklista',
+    await completePick({
+      rowId: rad.id,
+      produkt,
+      antalStyck: rad.antalStyck,
+      faktisktSaldo: avvikelse,
     });
-
-    // Om användaren angett faktiskt saldo och det avviker, logga korrigering
-    if (avvikelse !== null && avvikelse !== förväntatSaldo) {
-      const skillnad = avvikelse - förväntatSaldo;
-      await addStockEvent({
-        produktId: produkt.id,
-        typ: 'korrigering',
-        antal: skillnad,
-        enhet: 'plåt',
-        källa: 'plocklista',
-      });
-    }
-
-    await markRowPicked(rad.id, rad.antalStyck);
     onKlar();
   }
 

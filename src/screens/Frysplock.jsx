@@ -13,12 +13,12 @@ export default function Frysplock() {
   const [ocrText, setOcrText] = useState('');
   const [ocrBilder, setOcrBilder] = useState([]);
 
-  async function laddaListor() {
-    setListor(await getAllPickLists());
-  }
-
+  
   useEffect(() => {
-    if (vy === 'start') laddaListor();
+    if (vyasync function laddaListor() {
+  const alla = await getAllPickLists();
+  setListor(alla.filter((l) => l.status !== 'klar'));
+} === 'start') laddaListor();
   }, [vy]);
 
   if (vy === 'produkter') {

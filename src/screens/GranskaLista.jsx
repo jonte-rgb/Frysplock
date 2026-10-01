@@ -42,7 +42,7 @@ export default function GranskaLista({ ocrText, bilder, onKlar, onAvbryt }) {
     const giltiga = rader.filter((r) => r.namn.trim() && r.antal > 0);
     if (giltiga.length === 0) return;
 
-    const listaId = await createPickList({ bilder });
+    const listaId = await createPickList({ bilder, status: 'aktiv' });
 
     for (const rad of giltiga) {
       const produkt = matchaProdukt(rad.namn);

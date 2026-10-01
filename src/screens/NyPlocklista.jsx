@@ -23,7 +23,7 @@ export default function NyPlocklista({ onKlar, onAvbryt }) {
   }
 
   async function spara() {
-    const listaId = await createPickList({});
+    const listaId = await createPickList({status: 'aktiv'});
     for (const [produktId, antal] of Object.entries(valda)) {
       await addPickListRow({
         pickListId: listaId,
