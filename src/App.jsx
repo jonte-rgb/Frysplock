@@ -4,6 +4,7 @@ import Deg from './screens/Deg';
 import InIFrys from './screens/InIFrys';
 import Baka from './screens/Baka';
 import SaldoVy from './screens/SaldoVy';
+import NavIcon from './components/NavIcon';
 
 function App() {
   const [aktivFlik, setAktivFlik] = useState('frysplock');
@@ -22,19 +23,19 @@ function App() {
 
       <nav className="flikar">
         <button onClick={() => setAktivFlik('deg')} className={aktivFlik === 'deg' ? 'aktiv' : ''}>
-          Deg
+          <NavIcon name="deg" /><span>Deg</span>
         </button>
         <button onClick={() => setAktivFlik('infrys')} className={aktivFlik === 'infrys' ? 'aktiv' : ''}>
-          In i frys
+          <NavIcon name="infrys" /><span>In i frys</span>
         </button>
         <button onClick={() => setAktivFlik('frysplock')} className={aktivFlik === 'frysplock' ? 'aktiv' : ''}>
-          Frysplock
+          <NavIcon name="frysplock" /><span>Frysplock</span>
         </button>
         <button onClick={() => setAktivFlik('baka')} className={aktivFlik === 'baka' ? 'aktiv' : ''}>
-          Baka
+          <NavIcon name="baka" /><span>Baka</span>
         </button>
         <button onClick={() => setAktivFlik('saldo')} className={aktivFlik === 'saldo' ? 'aktiv' : ''}>
-          Saldo
+          <NavIcon name="saldo" /><span>Saldo</span>
         </button>
       </nav>
     </div>

@@ -169,3 +169,45 @@ test('OCR matchar bara entydiga namn/alias och alias kan inte ta en annan produk
   assert.equal((await getRowsForPickList(listId))[0].produktId, a);
   assert.ok((await db.products.get(a)).alias.includes('Kanel-snurror'));
 });
+
+test('Degrecept skalas proportionellt från vattenmängden', async () => {
+  const { scaleDoughRecipe, validateDoughRecipe } = await import('../src/services/recipeScaling.js');
+  const recipe = validateDoughRecipe({
+    namn: 'Vetebröd', basVatten: '10', vattenEnhet: 'l',
+    ingredienser: [
+      { namn: 'Mjöl', mängd: '16', enhet: 'kg' },
+      { namn: 'Jäst', mängd: '0,5', enhet: 'kg' },
+    ],
+  });
+  const scaled = scaleDoughRecipe(recipe, '15');
+  assert.equal(scaled.faktor, 1.5);
+  assert.equal(scaled.ingredienser[0].mängd, 24);
+  assert.equal(scaled.ingredienser[1].mängd, 0.75);
+  assert.throws(() => scaleDoughRecipe(recipe, 0), /större än noll/);
+});
+
+test('Baktimer sparar en absolut sluttid och kan återställas efter att appen varit stängd', async () => {
+  const { timerEndFromDuration, describeTimer } = await import('../src/services/bakeTimer.js');
+  const now = new Date('2026-10-06T02:00:00Z').getTime();
+  const end = timerEndFromDuration(30, now);
+  assert.equal(end, '2026-10-06T02:30:00.000Z');
+  assert.equal(describeTimer(end, now + 10 * 60_000).text, '20:00 kvar');
+  assert.equal(describeTimer(end, now + 35 * 60_000).text, 'klar för 5:00 sedan');
+});
+
+test('Bakprofil och flera produkttimers sparas utan att påverka fryslagret', async () => {
+  const { saveBakeProfile, getBakeProfile } = await import('../src/storage/bakeProfiles.js');
+  const { startBakeTimer, getAllBakeTimers } = await import('../src/storage/bakeTimers.js');
+  const produktId = await addProduct({ namn: 'Kanelbullar', styckPerPlåt: 40 });
+  await addStockEvent({ produktId, typ: 'inlägg', antal: 5, enhet: 'plåt' });
+  await saveBakeProfile(produktId, {
+    temperatur: '210 °C', baktid: '11–13 min', jäsning: '45–60 min',
+    jäsTimerMin: 50, bakaTimerMin: 12,
+  });
+  await startBakeTimer({ produktId, etikett: 'Jäsning', minuter: 50 });
+  await startBakeTimer({ produktId, etikett: 'Bakning', minuter: 12 });
+  assert.equal((await getBakeProfile(produktId)).temperatur, '210 °C');
+  assert.equal((await getAllBakeTimers()).length, 2);
+  assert.equal(await getStock(produktId, 40), 5);
+  assert.equal(await db.stockEvents.count(), 1);
+});

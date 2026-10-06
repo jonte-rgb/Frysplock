@@ -64,3 +64,23 @@ Leveranskontroll: 19 automatiska tester godkända; lint utan anmärkningar och p
 - `api/ocr.js`, `package.json`, `package-lock.json`, `README.md` samt nya testfiler under `tests/`.
 
 `.env.local` har inte ändrats. Ingen deploy har gjorts och inga användarkonton eller nya lager-/backend-system har lagts till.
+
+## Deg och Baka (första arbetsversion)
+
+### Deg
+- Egna degrecept sparas lokalt i IndexedDB.
+- Varje recept har en grundmängd vatten och valfria ingredienser/enheter.
+- Skriv in dagens vattenmängd så skalas hela receptet proportionellt.
+- Inga standardrecept är förifyllda; lägg bara in bageriets verkliga recept.
+
+### Baka
+- Bakinformation kopplas till befintliga produkter.
+- Stöd för temperatur, baktid, ånga, spjäll/ventil, tining, jäsning och specialinstruktion.
+- Valfria snabbtimers för tining, jäsning och bakning.
+- Flera timers kan vara igång samtidigt.
+- Timers sparar en absolut sluttid, så rätt kvarvarande/överskriden tid visas när appen öppnas igen.
+- Timers ger i denna version inget systemlarm när appen är helt stängd.
+- Baka skapar inga lagerhändelser och påverkar aldrig fryssaldot.
+
+### Databas
+Dexie-schema version 3 lägger till `doughRecipes`, `bakeProfiles` och `bakeTimers` utan att ändra befintliga tabeller eller lagerlogik.

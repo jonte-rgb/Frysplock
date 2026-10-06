@@ -85,10 +85,13 @@ export async function findProductByName(namn) {
 }
 
 export async function clearAllData() {
-  return db.transaction('rw', db.products, db.stockEvents, db.pickLists, db.pickListRows, async () => {
+  return db.transaction('rw', db.products, db.stockEvents, db.pickLists, db.pickListRows, db.doughRecipes, db.bakeProfiles, db.bakeTimers, async () => {
     await db.products.clear();
     await db.stockEvents.clear();
     await db.pickLists.clear();
     await db.pickListRows.clear();
+    await db.doughRecipes.clear();
+    await db.bakeProfiles.clear();
+    await db.bakeTimers.clear();
   });
 }
